@@ -6,6 +6,7 @@ from subprocess import PIPE
 import re
 from enum import Enum
 
+
 class ReturnCode(Enum):
     OK = 0
     WARNING = 1
@@ -13,19 +14,29 @@ class ReturnCode(Enum):
     UNKNOWN = 3
 
     def updateRc(self, obj, new):
-        if new.value < obj.rc.value:
+        if (new.value > obj.rc.value) | (obj.rc == ReturnCode.UNKNOWN):
             obj.rc = new
+
 
 class Main:
     NORMAL_VARS = {
-        "Current Drive Temperature": {'name': "Temperature", 'wval': 42, 'cval': 45},
+        "Current Drive Temperature": {'name': "Temperature", 'wval': 42, 'cval': 46},
         "Accumulated start-stop cycles": {'name': "Start_Stop"},
         "Accumulated load-unload cycles": {'name': "Load_Unload"},
-        "Non-medium error count": {'name': "Non-media_errors"},
-        "Accumulated power on time": {'name': "Power-On-Hours", "cparse": (lambda x: re.match('\D*(?P<val>\d+):\d+.*]', x).group('val'))},
+        "Non-medium error count": {'name': "Non_media_errors"},
+        "Accumulated power on time": {'name': "Power_On_Hours", "cparse": (lambda x: re.match('\D*(?P<val>\d+):\d+.*]', x).group('val'))},
         "Invalid DWORD count": {'name': "InvalidDWORD"},
         "Loss of DWORD synchronization": {'name': "DWORDSyncLoss"},
         "Phy reset problem": {'name': "PhyResetProblems"},
+    }
+
+    # Special vars from space-formatted table...
+    ELC_NAME_MAP = {
+        1: "CorrectedECCFast",
+        2: "CorrectedECCSlow",
+        3: "CorrectedRedo",
+        4: "CorrectedTotal",
+        7: "UncorrectedTotal"
     }
 
     def __init__(self):
@@ -59,7 +70,7 @@ class Main:
                 print(indata)
         self.val = self.val.split('\n')
 
-    def isSAS(self):
+    def is_sas(self):
         for line in self.val:
             if line.startswith('Transport protocol:'):
                 print(line)
@@ -68,15 +79,7 @@ class Main:
                 else:
                     exit(1)
 
-    ELC_NAME_MAP = {
-        1: "CorECCFast=",
-        2: "CorECCSlow=",
-        3: "CorRedo=",
-        4: "CorTotal=",
-        7: "UncorrTotal="
-    }
-
-    def parseECLRow(self, name, pos):
+    def parse_elc_row(self, name, pos):
         str = self.val[pos]
         arr = list(filter(lambda x: x != '', str.split(' ')))
         for i in [1,2,3,4,7]:
@@ -88,17 +91,15 @@ class Main:
                 self.dstr += 'WARNING: '
             else:
                 self.dstr += 'OK: '
-            self.dstr += (name + self.ELC_NAME_MAP[i])+arr[i] + '\n'
-            self.pdata += (name + self.ELC_NAME_MAP[i]) + arr[i] + ', '
+            self.dstr += (name + self.ELC_NAME_MAP[i] + ' = ')+arr[i] + '\n'
+            self.pdata += (name + self.ELC_NAME_MAP[i] + '=') + arr[i] + ', '
 
-
-    def printPerformanceData(self):
+    def build_performance_data(self):
         # Normal values
         for line in self.val:
             for key in self.NORMAL_VARS:
                 if key in line:
                     if not (key in self.ctr.keys()):
-                        val = ''
                         if 'cparse' in self.NORMAL_VARS[key].keys():
                             val = self.NORMAL_VARS[key]['cparse'](line)
                         else:
@@ -107,16 +108,16 @@ class Main:
                                 arr = line.split('=')
                             val = arr[1]
                             val = val.replace(' C', '').replace(' ', '')
+                        prefix = 'OK: '
                         if 'wval' in self.NORMAL_VARS[key].keys():
                             if int(val) > self.NORMAL_VARS[key]['wval']:
-                                self.dstr += 'WARNING: '
+                                prefix = 'WARNING: '
                                 self.rc.updateRc(self,ReturnCode.WARNING)
                         if 'cval' in self.NORMAL_VARS[key].keys():
                             if int(val) > self.NORMAL_VARS[key]['cval']:
-                                self.dstr += 'CRITICAL: '
+                                prefix = 'CRITICAL: '
                                 self.rc.updateRc(self,ReturnCode.CRITICAL)
-                        #else:
-                        #    self.dstr += 'OK: '
+                        self.dstr += prefix
                         self.dstr += self.NORMAL_VARS[key]['name']+' = '+val+'\n'
                         self.pdata += self.NORMAL_VARS[key]['name']+'='+val+', '
                         self.ctr[key] = 1
@@ -126,16 +127,29 @@ class Main:
             if line.startswith('Error counter log'):
                 # line + 1-3: Headings
                 # line 4: read
-                self.parseECLRow('Read', idx+4)
+                self.parse_elc_row('Read', idx + 4)
                 # line 5: write
-                self.parseECLRow('Write', idx+5)
+                self.parse_elc_row('Write', idx + 5)
                 # line 6: verify
-                self.parseECLRow('Verify', idx+6)
-        # Drop ',' after last value
-        self.pdata = self.pdata[0:len(self.pdata)-2]
+                self.parse_elc_row('Verify', idx + 6)
+
+        if len(self.pdata) > 10:
+            self.rc.updateRc(self, ReturnCode.OK)
+            # Drop ',' after last value
+            self.pdata = self.pdata[0:len(self.pdata)-2]
+
+    def run(self):
+        self.load()
+        if self.args.check:
+            self.is_sas() # Will exit
+        if self.args.verbose:
+            print ("Output from smartctl:")
+            print (self.val)
+        self.build_performance_data()
+        print (self.rc.name + " disk " + self.args.Disk + " | " + self.pdata)
         print (self.dstr)
+        exit (self.rc.value)
 
 
 obj = Main()
-obj.load()
-obj.printPerformanceData()
+obj.run()
