@@ -44,7 +44,7 @@ class Main:
         parser.add_argument('Disk')
         parser.add_argument('-c', dest='check', action="store_true", help='Only check if the disk is a SAS disk')
         parser.add_argument('-d', dest='infile', help='Use this file as input instead of executing smartctl')
-        parser.add_argument('-v', dest='vebose', action="store_true",  help='Be verbose')
+        parser.add_argument('-v', dest='verbose', action="store_true",  help='Be verbose')
         parser.set_defaults(check=False)
         parser.set_defaults(verbose=False)
         parser.set_defaults(infile='')
@@ -58,17 +58,18 @@ class Main:
 
     def load(self):
         if self.args.infile != '':
-            f = open('output.txt', 'r')
+            f = open(self.args.infile, 'r')
             self.val = f.read()
             f.close()
         else:
-            smartproc = Popen(['smartctl', '-l', self.args.Disk], stdout=PIPE, bufsize=8192)
+            smartproc = Popen(['sudo', '/usr/sbin/smartctl', '-x', self.args.Disk], stdout=PIPE, bufsize=8192)
             smartproc.wait()
             (indata, _) = smartproc.communicate()
-            self.val += indata
-            if self.args.verbose:
-                print(indata)
+            self.val = str(indata)
+        self.val = self.val.replace('\\n', '\n')
         self.val = self.val.split('\n')
+        if self.args.verbose:
+            print(self.val)
 
     def is_sas(self):
         for line in self.val:
@@ -78,6 +79,7 @@ class Main:
                     exit(0)
                 else:
                     exit(1)
+        exit(1)
 
     def parse_elc_row(self, name, pos):
         str = self.val[pos]
@@ -139,16 +141,22 @@ class Main:
             self.pdata = self.pdata[0:len(self.pdata)-2]
 
     def run(self):
-        self.load()
-        if self.args.check:
-            self.is_sas() # Will exit
-        if self.args.verbose:
-            print ("Output from smartctl:")
-            print (self.val)
-        self.build_performance_data()
-        print (self.rc.name + " disk " + self.args.Disk + " | " + self.pdata)
-        print (self.dstr)
-        exit (self.rc.value)
+        try:
+            self.load()
+            if self.args.check:
+                self.is_sas() # Will exit
+            if self.args.verbose:
+                print ("Output from smartctl:")
+                print (self.val)
+            self.build_performance_data()
+            print (self.rc.name + " disk " + self.args.Disk + " | " + self.pdata)
+            print (self.dstr)
+            exit (self.rc.value)
+        except Exception as e:
+            print ("UNKNOWN - Exception during execution:")
+            print (e.__doc__)
+            print (e.message)
+            exit(3)
 
 
 obj = Main()
