@@ -85,10 +85,16 @@ class Main:
         str = self.val[pos]
         arr = list(filter(lambda x: x != '', str.split(' ')))
         for i in [1,2,3,4,7]:
-            if int(arr[i]) > 20:
+            if i != 7:
+                wval = 5
+                cval = 20
+            else:
+                wval = 1
+                cval = 5
+            if int(arr[i]) > cval:
                 self.rc.updateRc(self, ReturnCode.CRITICAL)
                 self.dstr += 'CRITICAL: '
-            elif int(arr[i]) > 1:
+            elif int(arr[i]) > wval:
                 self.rc.updateRc(self, ReturnCode.WARNING)
                 self.dstr += 'WARNING: '
             else:
