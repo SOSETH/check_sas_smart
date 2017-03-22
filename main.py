@@ -82,8 +82,8 @@ class Main:
         exit(1)
 
     def parse_elc_row(self, name, pos):
-        str = self.val[pos]
-        arr = list(filter(lambda x: x != '', str.split(' ')))
+        string = self.val[pos]
+        arr = list(filter(lambda x: x != '', string.split(' ')))
         for i in [1,2,3,4,7]:
             if i != 7:
                 wval = 5
@@ -100,7 +100,7 @@ class Main:
             else:
                 self.dstr += 'OK: '
             self.dstr += (name + self.ELC_NAME_MAP[i] + ' = ')+arr[i] + '\n'
-            self.pdata += (name + self.ELC_NAME_MAP[i] + '=') + arr[i] + ', '
+            self.pdata += '\'' + (name + self.ELC_NAME_MAP[i] + '\'=') + arr[i] + 'c;' + str(wval) + ";" + str(cval) + ' '
 
     def build_performance_data(self):
         # Normal values
@@ -121,13 +121,15 @@ class Main:
                             if int(val) > self.NORMAL_VARS[key]['wval']:
                                 prefix = 'WARNING: '
                                 self.rc.updateRc(self,ReturnCode.WARNING)
-                        if 'cval' in self.NORMAL_VARS[key].keys():
                             if int(val) > self.NORMAL_VARS[key]['cval']:
                                 prefix = 'CRITICAL: '
                                 self.rc.updateRc(self,ReturnCode.CRITICAL)
+                            astr =  ";" + str(self.NORMAL_VARS[key]['wval']) + ";" + str(self.NORMAL_VARS[key]['cval'])
+                        else:
+                            astr = ''
                         self.dstr += prefix
                         self.dstr += self.NORMAL_VARS[key]['name']+' = '+val+'\n'
-                        self.pdata += self.NORMAL_VARS[key]['name']+'='+val+', '
+                        self.pdata += '\'' + self.NORMAL_VARS[key]['name'] + '\'='+val+'c'+ astr+ ' '
                         self.ctr[key] = 1
 
         # Special values
@@ -143,8 +145,8 @@ class Main:
 
         if len(self.pdata) > 10:
             self.rc.updateRc(self, ReturnCode.OK)
-            # Drop ',' after last value
-            self.pdata = self.pdata[0:len(self.pdata)-2]
+            # Drop ' ' after last value
+            self.pdata = self.pdata[0:len(self.pdata)-1]
 
     def run(self):
         try:
