@@ -39,6 +39,14 @@ class Main:
         7: "UncorrectedTotal"
     }
 
+    ELC_WARN_MAP = {
+        7: 1
+    }
+
+    ELC_CRIT_MAP = {
+        7: 3
+    }
+
     def __init__(self):
         parser = argparse.ArgumentParser(description='Icinga check for SMART values of SAS disks')
         parser.add_argument('Disk')
@@ -84,23 +92,23 @@ class Main:
     def parse_elc_row(self, name, pos):
         string = self.val[pos]
         arr = list(filter(lambda x: x != '', string.split(' ')))
-        for i in [1,2,3,4,7]:
-            if i != 7:
-                wval = 5
-                cval = 20
+        for i in self.ELC_NAME_MAP.keys():
+            val = int(arr[i])
+            if i in self.ELC_WARN_MAP.keys():
+                desc = ';' + str(self.ELC_WARN_MAP[i]) + ";" + str(self.ELC_CRIT_MAP[i])
+                if val > self.ELC_CRIT_MAP[i]:
+                    self.rc.updateRc(self, ReturnCode.CRITICAL)
+                    self.dstr += 'CRITICAL: '
+                elif val > self.ELC_WARN_MAP[i]:
+                    self.rc.updateRc(self, ReturnCode.WARNING)
+                    self.dstr += 'WARNING: '
+                else:
+                    self.dstr += 'OK: '
             else:
-                wval = 1
-                cval = 5
-            if int(arr[i]) > cval:
-                self.rc.updateRc(self, ReturnCode.CRITICAL)
-                self.dstr += 'CRITICAL: '
-            elif int(arr[i]) > wval:
-                self.rc.updateRc(self, ReturnCode.WARNING)
-                self.dstr += 'WARNING: '
-            else:
+                desc = ''
                 self.dstr += 'OK: '
             self.dstr += (name + self.ELC_NAME_MAP[i] + ' = ')+arr[i] + '\n'
-            self.pdata += '\'' + (name + self.ELC_NAME_MAP[i] + '\'=') + arr[i] + 'c;' + str(wval) + ";" + str(cval) + ' '
+            self.pdata += '\'' + (name + self.ELC_NAME_MAP[i] + '\'=') + arr[i] + 'c' + desc + ' '
 
     def build_performance_data(self):
         # Normal values
@@ -140,8 +148,9 @@ class Main:
                 self.parse_elc_row('Read', idx + 4)
                 # line 5: write
                 self.parse_elc_row('Write', idx + 5)
-                # line 6: verify
-                self.parse_elc_row('Verify', idx + 6)
+                # line 6: verify, but only if the disk supports it
+                if self.val[idx+6].startswith('Verify'):
+                    self.parse_elc_row('Verify', idx + 6)
 
         if len(self.pdata) > 10:
             self.rc.updateRc(self, ReturnCode.OK)
