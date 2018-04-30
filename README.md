@@ -1,4 +1,4 @@
-== check_sas_smart
+# check_sas_smart
 Check SMART values of SAS disks.
 
 This check is supposed to be used with with Icinga2 by defining a command
@@ -36,7 +36,7 @@ and finally setting something like this in the host variables:
   }
 ```
 
-=== Example output
+## Example output
 ```
 OK disk /dev/sda | 'Temperature'=39c;42;46 'Non_media_errors'=0c 'Power_On_Hours'=11860c 'InvalidDWORD'=0c 'DWORDSyncLoss'=2c 'PhyResetProblems'=0c 'ReadCorrectedECCFast'=70655970102c 'ReadCorrectedECCSlow'=0c 'ReadCorrectedRedo'=70655970102c 'ReadCorrectedTotal'=70655970102c 'ReadUncorrectedTotal'=0c;1;3 'WriteCorrectedECCFast'=0c 'WriteCorrectedECCSlow'=0c 'WriteCorrectedRedo'=0c 'WriteCorrectedTotal'=0c 'WriteUncorrectedTotal'=0c;1;3
 OK: Temperature = 39
