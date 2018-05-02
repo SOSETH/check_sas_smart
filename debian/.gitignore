@@ -1,0 +1,9 @@
+autoreconf.after
+autoreconf.before
+*.log
+*.substvars
+tmp
+check-sas-smart
+.debhelper
+debhelper-build-stamp
+files

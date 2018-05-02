@@ -1,1 +1,4 @@
 .idea
+.pybuild
+build
+check_sas_smart.egg-info
