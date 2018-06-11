@@ -51,6 +51,7 @@ class Main:
         2: "CorrectedECCSlow",
         3: "CorrectedRedo",
         4: "CorrectedTotal",
+        6: "ProcessedTotal",
         7: "UncorrectedTotal"
     }
 
@@ -68,9 +69,12 @@ class Main:
         parser.add_argument('-c', dest='check', action="store_true", help='Only check if the disk is a SAS disk')
         parser.add_argument('-d', dest='infile', help='Use this file as input instead of executing smartctl')
         parser.add_argument('-v', dest='verbose', action="store_true",  help='Be verbose')
+        parser.add_argument('-raid', dest='raiddevice',
+                            help='If the disk is behind a raid controller, specify the argument for \'-d\'')
         parser.set_defaults(check=False)
         parser.set_defaults(verbose=False)
         parser.set_defaults(infile='')
+        parser.set_defaults(raiddevice='')
         self.avg = None
         self.args = parser.parse_args()
         self.val = None
@@ -85,7 +89,11 @@ class Main:
             self.val = f.read()
             f.close()
         else:
-            smartproc = Popen(['sudo', '/usr/sbin/smartctl', '-x', self.args.Disk], stdout=PIPE, bufsize=8192)
+            args = ['sudo', '/usr/sbin/smartctl', '-x', self.args.Disk]
+            if self.args.raiddevice != '':
+                args.append('-d')
+                args.append(self.args.raiddevice)
+            smartproc = Popen(args, stdout=PIPE, bufsize=8192)
             smartproc.wait()
             (indata, _) = smartproc.communicate()
             self.val = str(indata)
@@ -108,7 +116,7 @@ class Main:
         string = self.val[pos]
         arr = list(filter(lambda x: x != '', string.split(' ')))
         for i in self.ELC_NAME_MAP.keys():
-            val = int(arr[i])
+            val = float(arr[i])
             if i in self.ELC_WARN_MAP.keys():
                 desc = ';' + str(self.ELC_WARN_MAP[i]) + ";" + str(self.ELC_CRIT_MAP[i])
                 if val > self.ELC_CRIT_MAP[i]:
@@ -141,10 +149,10 @@ class Main:
                             val = val.replace(' C', '').replace(' ', '')
                         prefix = 'OK: '
                         if 'wval' in self.NORMAL_VARS[key].keys():
-                            if int(val) > self.NORMAL_VARS[key]['wval']:
+                            if float(val) > self.NORMAL_VARS[key]['wval']:
                                 prefix = 'WARNING: '
                                 self.rc.updateRc(self,ReturnCode.WARNING)
-                            if int(val) > self.NORMAL_VARS[key]['cval']:
+                            if float(val) > self.NORMAL_VARS[key]['cval']:
                                 prefix = 'CRITICAL: '
                                 self.rc.updateRc(self,ReturnCode.CRITICAL)
                             astr =  ";" + str(self.NORMAL_VARS[key]['wval']) + ";" + str(self.NORMAL_VARS[key]['cval'])
