@@ -1,3 +1,9 @@
+check-sas-smart (0.3) unstable; urgency=medium
+
+  * Adjust temperature warning as we now have a *hot* datacenter
+
+ -- Maximilian Falkenstein <mfalkenstein@sos.ethz.ch>  Sun, 27 Jan 2019 00:34:16 +0100
+
 check-sas-smart (0.2) unstable; urgency=medium
 
   * Add support for disks behin RAID controllers

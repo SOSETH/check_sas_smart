@@ -35,7 +35,7 @@ class ReturnCode(Enum):
 
 class Main:
     NORMAL_VARS = {
-        "Current Drive Temperature": {'name': "Temperature", 'wval': 42, 'cval': 46},
+        "Current Drive Temperature": {'name': "Temperature", 'wval': 44, 'cval': 46},
         "Accumulated start-stop cycles": {'name': "Start_Stop"},
         "Accumulated load-unload cycles": {'name': "Load_Unload"},
         "Non-medium error count": {'name': "Non_media_errors"},
