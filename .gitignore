@@ -2,3 +2,5 @@
 .pybuild
 build
 check_sas_smart.egg-info
+__pycache__
+venv/
