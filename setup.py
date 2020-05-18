@@ -8,5 +8,10 @@ setup(name='check_sas_smart',
       author='Maximilian Falkenstein',
       author_email='mfalkenstein@sos.ethz.ch',
       url='https://github.com/SOSETH/check_sas_smart',
-      scripts=['bin/check_sas_smart'],
+      py_modules=['check_sas_smart'],
+      entry_points={
+          'console_scripts': [
+              'check_sas_smart = check_sas_smart:cli'
+              ]
+          }
 )

@@ -1,0 +1,41 @@
+variables:
+  DISTRIBUTION_VER: "buster"
+  APT_REPO: "sos-buster"
+
+image: soseth/debian-ci-base:$DISTRIBUTION_VER
+
+stages:
+  - build
+  - test_install
+  - deploy
+
+build:
+  stage: build
+  before_script:
+    - apt-get update -qq
+    - apt-get upgrade -qq
+    - apt-get install -qq dh-python python3-setuptools
+  script:
+    - dpkg-buildpackage -uc -us
+    - mkdir build
+    - mv ../check-sas-smart*.* build/
+  artifacts:
+    paths:
+    - build/*
+
+test_install:
+  stage: test_install
+  script:
+    - apt install ./build/*.deb
+    - /usr/lib/nagios/plugins/check_sas_smart || if [ $? -eq 2 ]; then echo 'Exit code matches'; else (exit 1); fi 
+
+deploy_to_apt:
+  stage: deploy
+  script:
+    - echo "Deploying package to $APT_REPO repo and $DISTRIBUTION_VER version"
+    - sudo -u repo aptly repo add $APT_REPO build/*.deb
+    - sudo -u repo aptly publish update $DISTRIBUTION_VER $DISTRIBUTION_VER
+  only:
+    - tags
+  tags:
+    - apt

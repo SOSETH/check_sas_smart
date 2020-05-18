@@ -199,5 +199,6 @@ class Main:
             exit(3)
 
 
-obj = Main()
-obj.run()
+def cli():
+    obj = Main()
+    obj.run()
