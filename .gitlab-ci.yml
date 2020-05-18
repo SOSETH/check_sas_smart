@@ -1,6 +1,6 @@
 variables:
-  DISTRIBUTION_VER: "buster"
-  APT_REPO: "sos-buster"
+  DISTRIBUTION_VER: "bullseye"
+  APT_REPO: "sos-bullseye"
 
 image: soseth/debian-ci-base:$DISTRIBUTION_VER
 
