@@ -1,3 +1,12 @@
+check-sas-smart (0.4) unstable; urgency=medium
+
+  * Enable GitLab CI
+  * PEP8: reformat code
+  * Add some more entries to gitignore
+  * Switch to console_scripts deployment
+
+ -- Peter Keresztes Schmidt <peterke@sos.ethz.ch>  Mon, 18 May 2020 19:25:33 +0200
+
 check-sas-smart (0.3) unstable; urgency=medium
 
   * Adjust temperature warning as we now have a *hot* datacenter
