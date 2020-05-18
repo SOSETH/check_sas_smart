@@ -16,10 +16,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
-from subprocess import Popen
-from subprocess import PIPE
 import re
 from enum import Enum
+from subprocess import PIPE
+from subprocess import Popen
 
 
 class ReturnCode(Enum):
@@ -28,7 +28,8 @@ class ReturnCode(Enum):
     CRITICAL = 2
     UNKNOWN = 3
 
-    def updateRc(self, obj, new):
+    @staticmethod
+    def update_rc(obj, new):
         if (new.value > obj.rc.value) | (obj.rc == ReturnCode.UNKNOWN):
             obj.rc = new
 
@@ -39,7 +40,8 @@ class Main:
         "Accumulated start-stop cycles": {'name': "Start_Stop"},
         "Accumulated load-unload cycles": {'name': "Load_Unload"},
         "Non-medium error count": {'name': "Non_media_errors"},
-        "Accumulated power on time": {'name': "Power_On_Hours", "cparse": (lambda x: re.match('\D*(?P<val>\d+):\d+.*]', x).group('val'))},
+        "Accumulated power on time": {'name': "Power_On_Hours",
+                                      "cparse": (lambda x: re.match('\D*(?P<val>\d+):\d+.*]', x).group('val'))},
         "Invalid DWORD count": {'name': "InvalidDWORD"},
         "Loss of DWORD synchronization": {'name': "DWORDSyncLoss"},
         "Phy reset problem": {'name': "PhyResetProblems"},
@@ -68,7 +70,7 @@ class Main:
         parser.add_argument('Disk')
         parser.add_argument('-c', dest='check', action="store_true", help='Only check if the disk is a SAS disk')
         parser.add_argument('-d', dest='infile', help='Use this file as input instead of executing smartctl')
-        parser.add_argument('-v', dest='verbose', action="store_true",  help='Be verbose')
+        parser.add_argument('-v', dest='verbose', action="store_true", help='Be verbose')
         parser.add_argument('-raid', dest='raiddevice',
                             help='If the disk is behind a raid controller, specify the argument for \'-d\'')
         parser.set_defaults(check=False)
@@ -120,17 +122,17 @@ class Main:
             if i in self.ELC_WARN_MAP.keys():
                 desc = ';' + str(self.ELC_WARN_MAP[i]) + ";" + str(self.ELC_CRIT_MAP[i])
                 if val > self.ELC_CRIT_MAP[i]:
-                    self.rc.updateRc(self, ReturnCode.CRITICAL)
+                    self.rc.update_rc(self, ReturnCode.CRITICAL)
                     self.dstr += 'CRITICAL: '
                 elif val > self.ELC_WARN_MAP[i]:
-                    self.rc.updateRc(self, ReturnCode.WARNING)
+                    self.rc.update_rc(self, ReturnCode.WARNING)
                     self.dstr += 'WARNING: '
                 else:
                     self.dstr += 'OK: '
             else:
                 desc = ''
                 self.dstr += 'OK: '
-            self.dstr += (name + self.ELC_NAME_MAP[i] + ' = ')+arr[i] + '\n'
+            self.dstr += (name + self.ELC_NAME_MAP[i] + ' = ') + arr[i] + '\n'
             self.pdata += '\'' + (name + self.ELC_NAME_MAP[i] + '\'=') + arr[i] + 'c' + desc + ' '
 
     def build_performance_data(self):
@@ -151,16 +153,16 @@ class Main:
                         if 'wval' in self.NORMAL_VARS[key].keys():
                             if float(val) > self.NORMAL_VARS[key]['wval']:
                                 prefix = 'WARNING: '
-                                self.rc.updateRc(self,ReturnCode.WARNING)
+                                self.rc.update_rc(self, ReturnCode.WARNING)
                             if float(val) > self.NORMAL_VARS[key]['cval']:
                                 prefix = 'CRITICAL: '
-                                self.rc.updateRc(self,ReturnCode.CRITICAL)
-                            astr =  ";" + str(self.NORMAL_VARS[key]['wval']) + ";" + str(self.NORMAL_VARS[key]['cval'])
+                                self.rc.update_rc(self, ReturnCode.CRITICAL)
+                            astr = ";" + str(self.NORMAL_VARS[key]['wval']) + ";" + str(self.NORMAL_VARS[key]['cval'])
                         else:
                             astr = ''
                         self.dstr += prefix
-                        self.dstr += self.NORMAL_VARS[key]['name']+' = '+val+'\n'
-                        self.pdata += '\'' + self.NORMAL_VARS[key]['name'] + '\'='+val+'c'+ astr+ ' '
+                        self.dstr += self.NORMAL_VARS[key]['name'] + ' = ' + val + '\n'
+                        self.pdata += '\'' + self.NORMAL_VARS[key]['name'] + '\'=' + val + 'c' + astr + ' '
                         self.ctr[key] = 1
 
         # Special values
@@ -172,31 +174,31 @@ class Main:
                 # line 5: write
                 self.parse_elc_row('Write', idx + 5)
                 # line 6: verify, but only if the disk supports it
-                if self.val[idx+6].startswith('Verify'):
+                if self.val[idx + 6].startswith('Verify'):
                     self.parse_elc_row('Verify', idx + 6)
 
         if len(self.pdata) > 10:
-            self.rc.updateRc(self, ReturnCode.OK)
+            self.rc.update_rc(self, ReturnCode.OK)
             # Drop ' ' after last value
-            self.pdata = self.pdata[0:len(self.pdata)-1]
+            self.pdata = self.pdata[0:len(self.pdata) - 1]
 
     def run(self):
         try:
             self.load()
             if self.args.check:
-                self.is_sas() # Will exit
+                self.is_sas()  # Will exit
             if self.args.verbose:
-                print ("Output from smartctl:")
-                print (self.val)
+                print("Output from smartctl:")
+                print(self.val)
             self.build_performance_data()
-            print (self.rc.name + " disk " + self.args.Disk + " | " + self.pdata)
-            print (self.dstr)
-            exit (self.rc.value)
+            print(self.rc.name + " disk " + self.args.Disk + " | " + self.pdata)
+            print(self.dstr)
+            exit(self.rc.value)
         except Exception as e:
-            print ("UNKNOWN - Exception during execution:")
-            print (e.__doc__)
-            print (e.message)
-            exit(3)
+            print("UNKNOWN - Exception during execution:")
+            print(e.__doc__)
+            print(e.message)
+            exit(ReturnCode.UNKNOWN)
 
 
 def cli():
